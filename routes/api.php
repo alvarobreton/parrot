@@ -22,4 +22,5 @@ Route::post('/user','App\Http\Controllers\UsersController@store');
 
 Route::post('/products','App\Http\Controllers\ProductsController@store');
 Route::post('/create_order','App\Http\Controllers\OrdersController@store');
+Route::post('/order','App\Http\Controllers\OrdersController@index');
 
