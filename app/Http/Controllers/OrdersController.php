@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
 use App\Models\Orders;
 use App\Models\Products;
 use App\Models\Sales;
+use App\Models\User;
 
 class OrdersController extends Controller
 {
@@ -18,6 +21,7 @@ class OrdersController extends Controller
     public function index(Request $request)
     {
         $orders = new Orders;
+        $sales = new Sales;
         $sales = new Sales;
 
         $order = $orders->join('products', 'products.id', '=', 'orders.product_id')
@@ -57,29 +61,14 @@ class OrdersController extends Controller
         $orders = new Orders();
         $products = new Products();
         $sales = new Sales();
-        
-        
-        if(empty($request->number_order))
-        {
-            $response = array(
-                'error'     => TRUE,
-                'message'   => "Número de orden no especificado [number_order]"
-            );
-            return $this->response($response, 400);
-        }
+        $userId = Auth::id();
+        $user = User::find($userId);
 
-        if(!empty($request->product))
+        if($request->number_order > 0)
         {
             $price = $products->where('id', $request->product)->value('price');
+            $name = $products->where('id', $request->product)->value('name');
             $number_order = $request->number_order;
-            
-            if($sales->where('user_id', 1)->where('status', 0)->where('id', $number_order)->exists() == 0)
-            {
-                $sales->user_id     = 1;
-                $sales->status      = 0;
-                $sales->save();     
-                $number_order = $sales->id;     
-            }
             
             if($orders->where('product_id', $request->product)->where('number_order', $number_order)->exists())
             {
@@ -103,21 +92,27 @@ class OrdersController extends Controller
             }
 
             $response = array(
-                'message'   => "Fue agregado con éxito tu producto, puedes seguir añadiendo más productos",
+                'message'   => "Fue agregado con éxito tu producto: {$name}, puedes seguir añadiendo más productos",
                 'products'  => $products->select('id','name','price')->get(),
+                'number_order'  => $request->number_order,
+                'number_order'  => $request->number_order,
             );
             return $this->response($response, 201);
         }
-
-        if(empty($orders->where('number_order', $request->number_order)->exists()))
+        else
         {
+            $sales->user_id     = $userId;
+            $sales->status      = 0;
+            $sales->save();     
+            $number_order = $sales->id;
+
             $response = array(
                 'message'   => "Hola, te mostramos la lista de nuestros productos, seleccione para agregarlo a su pedido",
                 'products'  => $products->select('id','name','price')->get(),
+                'number_order'  => $number_order
             );
-            return $this->response($response, 201);
+            return $this->response($response, 200);
         }
-
     }
 
     /**
