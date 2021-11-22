@@ -12,6 +12,17 @@ use App\Models\User;
 
 class OrdersController extends Controller
 {
+    private $orders;
+    private $sales;
+    private $products;
+
+    function __construct() {
+        
+        $this->orders = new Orders;
+        $this->sales = new Sales;
+        $this->products = new Products;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -20,15 +31,12 @@ class OrdersController extends Controller
      */
     public function index(Request $request)
     {
-        $orders = new Orders;
-        $sales = new Sales;
-        $sales = new Sales;
 
-        $order = $orders->join('products', 'products.id', '=', 'orders.product_id')
+        $order = $this->orders->join('products', 'products.id', '=', 'orders.product_id')
                         ->join('sales', 'sales.id', '=', 'orders.number_order')
                         ->select('orders.id','products.name','orders.total_price','orders.quantity')
                         ->where('number_order', $request->number_order)->get();
-        $user = $sales->join('users', 'users.id', '=', 'sales.user_id')
+        $user = $this->sales->join('users', 'users.id', '=', 'sales.user_id')
                     ->select('users.name')->where('sales.id', $request->number_order)->get();
 
         $response = array(
@@ -58,57 +66,23 @@ class OrdersController extends Controller
      */
     public function store(Request $request)
     {
-        $orders = new Orders();
-        $products = new Products();
-        $sales = new Sales();
         $userId = Auth::id();
-        $user = User::find($userId);
 
         if($request->number_order > 0)
         {
-            $price = $products->where('id', $request->product)->value('price');
-            $name = $products->where('id', $request->product)->value('name');
-            $number_order = $request->number_order;
-            
-            if($orders->where('product_id', $request->product)->where('number_order', $number_order)->exists())
-            {
-                $quantity = $orders->where('product_id', $request->product)->where('number_order', $number_order)->value('quantity');
-                $quantity = $quantity+$request->quantity;
-                $price = $price*$quantity;
-                $orders->where('product_id', $request->product)
-                        ->where('number_order', $number_order)
-                        ->update([
-                            'quantity'      => $quantity,
-                            'total_price'   => $price,
-                        ]);
-            }
-            else
-            {
-                $orders->product_id     = $request->product;
-                $orders->quantity       = $request->quantity;
-                $orders->total_price    = $price*$request->quantity;
-                $orders->number_order    = $number_order;
-                $orders->save();
-            }
-
-            $response = array(
-                'message'   => "Fue agregado con éxito tu producto: {$name}, puedes seguir añadiendo más productos",
-                'products'  => $products->select('id','name','price')->get(),
-                'number_order'  => $request->number_order,
-                'number_order'  => $request->number_order,
-            );
+            $response = $this->checkProduct($request);
             return $this->response($response, 201);
         }
         else
         {
-            $sales->user_id     = $userId;
-            $sales->status      = 0;
-            $sales->save();     
-            $number_order = $sales->id;
+            $this->sales->user_id     = $userId;
+            $vsales->status      = 0;
+            $this->sales->save();     
+            $this->number_order = $sales->id;
 
             $response = array(
                 'message'   => "Hola, te mostramos la lista de nuestros productos, seleccione para agregarlo a su pedido",
-                'products'  => $products->select('id','name','price')->get(),
+                'products'  => $this->products->select('id','name','price')->get(),
                 'number_order'  => $number_order
             );
             return $this->response($response, 200);
@@ -170,5 +144,47 @@ class OrdersController extends Controller
     public function response(array $messages, int $status)
     {
         return response()->json($messages, $status);
+    }
+
+    /**
+     *
+     * @param  array $requests
+     * @return \Illuminate\Http\Response
+     */
+    public function checkProduct($requests)
+    {
+        $price = $this->products->where('id', $requests->product)->value('price');
+        $name = $this->products->where('id', $requests->product)->value('name');
+
+        if($this->orders->where('product_id', $requests->product)->where('number_order', $requests->number_order)->exists())
+        {
+            $quantity = $this->orders->where('product_id', $requests->product)->where('number_order', $requests->number_order)->value('quantity');
+            $quantity = $quantity+$requests->quantity;
+
+            $price = $price*$quantity;
+
+            $this->orders->where('product_id', $requests->product)
+                    ->where('number_order', $requests->number_order)
+                    ->update([
+                        'quantity'      => $quantity,
+                        'total_price'   => $price,
+                    ]);
+        }
+        else
+        {
+            $this->orders->product_id     = $requests->product;
+            $this->orders->quantity       = $requests->quantity;
+            $this->orders->total_price    = $price*$requests->quantity;
+            $this->orders->number_order    = $requests->number_order;
+            $this->orders->save();
+        }
+
+        $response = array(
+            'message'   => "Fue agregado con éxito tu producto: {$name}, puedes seguir añadiendo más productos",
+            'products'  => $this->products->select('id','name','price')->get(),
+            'number_order'  => $requests->number_order,
+        );
+
+        return $response;
     }
 }

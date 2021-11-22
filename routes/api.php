@@ -36,5 +36,5 @@ Route::post('/report','App\Http\Controllers\ReportController@index');*/
 Route::middleware('auth:api')->post('/products','App\Http\Controllers\ProductsController@store');
 Route::middleware('auth:api')->post('/create_order','App\Http\Controllers\OrdersController@store');
 Route::middleware('auth:api')->post('/order','App\Http\Controllers\OrdersController@index');
-Route::middleware('auth:api')->get('/report','App\Http\Controllers\ReportController@index');
+Route::middleware('auth:api')->post('/report','App\Http\Controllers\ReportController@index');
 
